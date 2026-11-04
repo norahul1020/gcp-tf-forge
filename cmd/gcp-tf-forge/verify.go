@@ -21,7 +21,7 @@ produces the golden metric: "0 to add, 0 to change, 0 to destroy".`,
 }
 
 func init() {
-	verifyCmd.Flags().StringVarP(&verifyDir, "dir", "d", "./generated-infra", "Directory containing the generated Terraform code")
+	verifyCmd.Flags().StringVar(&verifyDir, "dir", "./generated-infra", "Directory containing the generated Terraform code")
 	rootCmd.AddCommand(verifyCmd)
 }
 

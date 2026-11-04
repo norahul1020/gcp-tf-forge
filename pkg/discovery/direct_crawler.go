@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
 )
 
-// DirectCrawler discovers resources via direct gcloud commands when CAI is disabled.
+// DirectCrawler discovers resources via direct gcloud commands or local emulators.
 type DirectCrawler struct {
 	ProjectID string
 }
@@ -69,14 +72,45 @@ func (c *DirectCrawler) Crawl(ctx context.Context) ([]*Asset, error) {
 		go func(assetType string, args []string) {
 			defer wg.Done()
 
-			out, err := exec.CommandContext(ctx, "gcloud", args...).Output()
-			if err != nil {
-				// Non-fatal if a service has 0 resources or is uninitialized
-				return
+			var items []map[string]interface{}
+
+			// Check for Storage Emulator (e.g. floci-gcp, fake-gcs-server, localgcp)
+			if assetType == "storage.googleapis.com/Bucket" && os.Getenv("STORAGE_EMULATOR_HOST") != "" {
+				emulatorHost := os.Getenv("STORAGE_EMULATOR_HOST")
+				if !strings.HasPrefix(emulatorHost, "http://") && !strings.HasPrefix(emulatorHost, "https://") {
+					emulatorHost = "http://" + emulatorHost
+				}
+				cleanHost := strings.TrimSuffix(emulatorHost, "/")
+				cleanHost = strings.TrimSuffix(cleanHost, "/storage/v1")
+
+				reqURL := fmt.Sprintf("%s/storage/v1/b?project=%s", cleanHost, c.ProjectID)
+				resp, err := http.Get(reqURL)
+				if err == nil && resp.StatusCode == http.StatusOK {
+					body, _ := io.ReadAll(resp.Body)
+					resp.Body.Close()
+
+					var result map[string]interface{}
+					if err := json.Unmarshal(body, &result); err == nil {
+						if rawList, ok := result["items"].([]interface{}); ok {
+							for _, it := range rawList {
+								if m, ok := it.(map[string]interface{}); ok {
+									items = append(items, m)
+								}
+							}
+						}
+					}
+				}
 			}
 
-			var items []map[string]interface{}
-			if err := json.Unmarshal(out, &items); err != nil {
+			// If not from emulator, query via gcloud CLI
+			if len(items) == 0 {
+				out, err := exec.CommandContext(ctx, "gcloud", args...).Output()
+				if err == nil {
+					_ = json.Unmarshal(out, &items)
+				}
+			}
+
+			if len(items) == 0 {
 				return
 			}
 
@@ -104,6 +138,8 @@ func (c *DirectCrawler) Crawl(ctx context.Context) ([]*Asset, error) {
 					loc = extractLastSegment(region)
 				} else if zone, ok := item["zone"].(string); ok {
 					loc = extractLastSegment(zone)
+				} else if location, ok := item["location"].(string); ok {
+					loc = location
 				}
 
 				assets = append(assets, &Asset{

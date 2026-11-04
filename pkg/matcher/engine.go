@@ -53,6 +53,7 @@ func (e *Engine) Reconcile(g *graph.Graph) (*MatchResult, error) {
 
 	// Step 2: Evaluate Primary Module Targets (Custom first, then Official)
 	allSpecs := append(e.CustomSpecs, e.OfficialSpecs...)
+	seenModuleNames := make(map[string]int)
 
 	for _, spec := range allSpecs {
 		for _, node := range g.Nodes {
@@ -62,7 +63,10 @@ func (e *Engine) Reconcile(g *graph.Graph) (*MatchResult, error) {
 
 			if node.Asset.TerraformResourceType() == spec.PrimaryResourceType {
 				// Matched a primary resource! Materialize module call
-				modCall := e.materializeModule(spec, node, g, consumedNodes)
+				seenCount := seenModuleNames[spec.Name]
+				seenModuleNames[spec.Name]++
+
+				modCall := e.materializeModule(spec, node, g, consumedNodes, seenCount)
 				if modCall != nil {
 					result.ResolvedModules = append(result.ResolvedModules, modCall)
 				}
@@ -82,12 +86,20 @@ func (e *Engine) Reconcile(g *graph.Graph) (*MatchResult, error) {
 }
 
 // materializeModule builds the inputs, bundles children, and synthesizes import addresses.
-func (e *Engine) materializeModule(spec *ModuleSpec, primary *graph.Node, g *graph.Graph, consumed map[string]bool) *ResolvedModuleCall {
+func (e *Engine) materializeModule(spec *ModuleSpec, primary *graph.Node, g *graph.Graph, consumed map[string]bool, instanceIdx int) *ResolvedModuleCall {
 	consumed[primary.ID] = true
-	primary.TargetModule = fmt.Sprintf("module.%s", spec.Name)
+
+	modName := spec.Name
+	if instanceIdx > 0 {
+		cleanName := strings.ReplaceAll(strings.ToLower(primary.Asset.DisplayName), "-", "_")
+		cleanName = strings.ReplaceAll(cleanName, ".", "_")
+		modName = fmt.Sprintf("%s_%s", spec.Name, cleanName)
+	}
+
+	primary.TargetModule = fmt.Sprintf("module.%s", modName)
 
 	call := &ResolvedModuleCall{
-		ModuleName:       spec.Name,
+		ModuleName:       modName,
 		Source:           spec.Source,
 		Version:          spec.Version,
 		Domain:           primary.Asset.Domain(),
@@ -107,7 +119,7 @@ func (e *Engine) materializeModule(spec *ModuleSpec, primary *graph.Node, g *gra
 
 	// Add primary import target
 	call.ImportTargets = append(call.ImportTargets, ImportTarget{
-		ToAddress: fmt.Sprintf("module.%s.%s.%s", spec.Name, spec.PrimaryResourceType, spec.InternalResourceName),
+		ToAddress: fmt.Sprintf("module.%s.%s.%s", modName, spec.PrimaryResourceType, spec.InternalResourceName),
 		CloudID:   primary.Asset.Name,
 	})
 
@@ -142,7 +154,7 @@ func (e *Engine) materializeModule(spec *ModuleSpec, primary *graph.Node, g *gra
 
 				if isChild {
 					consumed[node.ID] = true
-					node.TargetModule = fmt.Sprintf("module.%s", spec.Name)
+					node.TargetModule = fmt.Sprintf("module.%s", modName)
 					call.ChildResourceIDs = append(call.ChildResourceIDs, node.ID)
 
 					// Map child fields
@@ -161,7 +173,7 @@ func (e *Engine) materializeModule(spec *ModuleSpec, primary *graph.Node, g *gra
 					// Calculate exact for_each index key for import
 					indexKey := e.resolveIndexKey(childRule.IndexKeyPattern, node)
 					toAddress := fmt.Sprintf("module.%s.%s.%s[\"%s\"]",
-						spec.Name, childRule.ResourceType, childRule.InternalResourceName, indexKey)
+						modName, childRule.ResourceType, childRule.InternalResourceName, indexKey)
 
 					call.ImportTargets = append(call.ImportTargets, ImportTarget{
 						ToAddress: toAddress,

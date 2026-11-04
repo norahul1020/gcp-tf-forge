@@ -24,7 +24,7 @@ successfully imported. Once state binding is verified, it safely deletes transit
 }
 
 func init() {
-	cleanupCmd.Flags().StringVarP(&cleanupDir, "dir", "d", "./generated-infra", "Directory containing the generated Terraform code")
+	cleanupCmd.Flags().StringVar(&cleanupDir, "dir", "./generated-infra", "Directory containing the generated Terraform code")
 	cleanupCmd.Flags().BoolVar(&keepBackup, "backup", true, "Preserve an archived copy of imports in .archive/")
 	rootCmd.AddCommand(cleanupCmd)
 }
