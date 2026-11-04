@@ -1,26 +1,48 @@
-# `gcp-tf-forge` 🛠️☁️
+<p align="center">
+  <img src="assets/hero-banner.svg" alt="gcp-tf-forge banner" width="100%">
+</p>
 
-> **The Enterprise-Grade GCP Infrastructure Importer & Modernizer for Terraform**
+<p align="center">
+  <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License"></a>
+  <a href="https://github.com/norahul1020/gcp-tf-forge/actions/workflows/ci.yml"><img src="https://github.com/norahul1020/gcp-tf-forge/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://goreportcard.com/report/github.com/norahul1020/gcp-tf-forge"><img src="https://img.shields.io/badge/Go_Report-A+-brightgreen.svg" alt="Go Report"></a>
+  <a href="https://terraform.io"><img src="https://img.shields.io/badge/Terraform->=1.5.0-623CE4.svg" alt="Terraform"></a>
+</p>
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Report Card](https://goreportcard.com/badge/github.com/GoogleCloudPlatform/gcp-tf-forge)](https://goreportcard.com/report/github.com/GoogleCloudPlatform/gcp-tf-forge)
+---
 
-`gcp-tf-forge` is an open-source CLI engine specifically designed to reverse-engineer Google Cloud infrastructure into clean, maintainable, modular Terraform HCL.
+`gcp-tf-forge` is an enterprise-grade, open-source CLI engine specifically built to reverse-engineer Google Cloud Platform infrastructure into **clean, maintainable, modular Terraform HCL**.
 
 Unlike legacy tools that output hundreds of flat, unmanageable raw resources, `gcp-tf-forge`:
-- **Synthesizes resources into Terraform Modules** (Your internal custom modules first, official Google modules second, and clean raw HCL as fallback).
-- **Separates configurations into domain-isolated `.auto.tfvars`** (`networking.auto.tfvars`, `compute.auto.tfvars`, `storage.auto.tfvars`).
-- **Enforces Zero-Trust Security**: Never reads secret payloads and automatically injects lifecycle shields for database passwords and cloud APIs.
-- **Eliminates False Drift**: Reconciles GCP API defaults with Terraform Provider defaults for a verified `0 to add, 0 to change, 0 to destroy` plan.
-- **Cleans up after itself**: Generates native Terraform 1.5+ `import {}` blocks, and prunes them automatically once resources are bound to state.
+- 🧩 **Synthesizes resources into Terraform Modules** (Your internal custom modules first, official Google modules second, and clean raw HCL as fallback).
+- 📦 **Separates configurations into domain-isolated `.auto.tfvars`** (`networking.auto.tfvars`, `compute.auto.tfvars`, `storage.auto.tfvars`).
+- 🛡️ **Enforces Zero-Trust Security**: Never reads secret payloads and automatically injects lifecycle shields for database passwords and cloud APIs.
+- 🎯 **Eliminates False Drift**: Reconciles GCP API defaults with Terraform Provider defaults for a verified `0 to add, 0 to change, 0 to destroy` plan.
+- 🧹 **Cleans up after itself**: Generates native Terraform 1.5+ `import {}` blocks, and prunes them automatically once resources are bound to state.
+
+---
+
+## 📺 Interactive Terminal Demo
+
+<p align="center">
+  <img src="assets/terminal-demo.svg" alt="gcp-tf-forge terminal walkthrough" width="100%">
+</p>
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Install
+### 1. Installation
+
+#### Via Go Install:
 ```bash
-# Download latest binary (or build from source)
+go install github.com/norahul1020/gcp-tf-forge/cmd/gcp-tf-forge@latest
+```
+
+#### From Source:
+```bash
+git clone https://github.com/norahul1020/gcp-tf-forge.git
+cd gcp-tf-forge
 make build
 sudo mv bin/gcp-tf-forge /usr/local/bin/
 ```
@@ -32,7 +54,7 @@ gcp-tf-forge doctor --project=my-production-app
 ```
 
 ### 3. Dry-Run Plan & Module Preview
-Scan the cloud and see how resources will be mapped into modules without writing any files:
+Scan the cloud and preview how resources will be mapped into modules without writing any files:
 ```bash
 gcp-tf-forge plan \
   --project=my-production-app \
@@ -67,14 +89,11 @@ git commit -m "feat(infra): reverse-engineered production infra via gcp-tf-forge
 
 ---
 
-## 🏛️ Architecture & Process Flow
+## 🏛️ System Architecture
 
-```
-[ 1. Discovery ] ──▶ [ 2. Graph & Topology ] ──▶ [ 3. Module Reconciliation ] ──▶ [ 4. HCL2 Emitter ] ──▶ [ 5. Verification & Pruning ]
-  CAI 1-Shot Scanner     Resolves Subnet->VPC      User Custom Modules             Domain *.auto.tfvars     terraform validate & plan
-  Targeted Enricher      Shared VPC Data Sources   Google Official Modules         Lifecycle Shields        Auto-prunes *_imports.tf
-  Direct API Fallback    Dynamic Node Filter       Clean Raw Fallback              Terraform 1.5+ imports   Clean Git repository
-```
+<p align="center">
+  <img src="assets/architecture-diagram.svg" alt="System Architecture Diagram" width="100%">
+</p>
 
 ---
 
@@ -103,4 +122,4 @@ Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md) 
 
 ## ⚖️ License
 
-Distributed under the Apache 2.0 License. See `LICENSE` for more information.
+Distributed under the Apache 2.0 License. See [LICENSE](LICENSE) for more information.

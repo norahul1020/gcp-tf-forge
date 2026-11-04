@@ -1,0 +1,39 @@
+<svg width="860" height="480" viewBox="0 0 860 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Terminal Window Background -->
+  <rect width="860" height="480" rx="12" fill="#0f172a" stroke="#334155" stroke-width="2" />
+  
+  <!-- Window Header -->
+  <rect width="860" height="38" rx="12" fill="#1e293b" />
+  <circle cx="24" cy="19" r="6" fill="#ef4444" />
+  <circle cx="44" cy="19" r="6" fill="#f59e0b" />
+  <circle cx="64" cy="19" r="6" fill="#10b981" />
+  <text x="430" y="24" font-family="-apple-system, BlinkMacSystemFont, monospace" font-size="12" font-weight="600" fill="#94a3b8" text-anchor="middle">gcp-tf-forge — terminal demo</text>
+
+  <!-- Animated Terminal Content -->
+  <g transform="translate(25, 60)" font-family="'JetBrains Mono', 'Fira Code', Menlo, Monaco, 'Courier New', monospace" font-size="13">
+    <!-- Command 1: Doctor -->
+    <text x="0" y="20" fill="#38bdf8" font-weight="700">$ gcp-tf-forge doctor --project=prod-payment-app</text>
+    <text x="0" y="45" fill="#34d399">✔ GCP Identity: sec-auditor@company.iam.gserviceaccount.com</text>
+    <text x="0" y="65" fill="#34d399">✔ Security Posture: Read-Only Verified (Zero-Trust Compliant)</text>
+    <text x="0" y="85" fill="#34d399">✔ Secret Safety: Zero-Payload posture verified (no secretAccessor)</text>
+    <text x="0" y="105" fill="#34d399">✔ Hierarchy: example.com (Org) &gt; Production (Folder) &gt; prod-payment-app</text>
+    <text x="0" y="125" fill="#34d399">✔ Discovery Engine: Cloud Asset Inventory API available</text>
+
+    <!-- Command 2: Export -->
+    <text x="0" y="165" fill="#38bdf8" font-weight="700">$ gcp-tf-forge export --project=prod-payment-app --out=./infra</text>
+    <text x="0" y="190" fill="#f1f5f9">==&gt; Phase 1: Ingesting assets via Cloud Asset Inventory (1-shot scan)...</text>
+    <text x="0" y="210" fill="#94a3b8">    ✔ Discovered 48 cloud assets in 1.8s</text>
+    <text x="0" y="230" fill="#f1f5f9">==&gt; Phase 2: Resolving topology graph &amp; Shared VPC data sources...</text>
+    <text x="0" y="250" fill="#f1f5f9">==&gt; Phase 3: Matching custom &amp; official Google modules...</text>
+    <text x="0" y="270" fill="#a78bfa">    ✔ Mapped VPC + 4 Subnets to terraform-google-modules/network/google</text>
+    <text x="0" y="290" fill="#a78bfa">    ✔ Injected Lifecycle Password Shield on Cloud SQL instance</text>
+    <text x="0" y="310" fill="#f1f5f9">==&gt; Phase 4: Emitting domain-isolated *.auto.tfvars &amp; import blocks...</text>
+    <text x="0" y="330" fill="#34d399">    ✔ COMPLIANCE_AUDIT.md generated (CIS Benchmark Score: 92%)</text>
+
+    <!-- Command 3: Cleanup -->
+    <text x="0" y="365" fill="#38bdf8" font-weight="700">$ gcp-tf-forge cleanup --dir=./infra</text>
+    <text x="0" y="390" fill="#34d399">✔ State Verification: 100% of imported resources confirmed in state.</text>
+    <text x="0" y="410" fill="#34d399">✔ Pruned 4 transitional import files into .archive/imports/</text>
+    <text x="0" y="430" fill="#fbbf24" font-weight="700">✨ Repository is clean and Git-ready! Commit pure HCL code.</text>
+  </g>
+</svg>
