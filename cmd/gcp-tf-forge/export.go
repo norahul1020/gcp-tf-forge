@@ -4,6 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"gcp-tf-forge/pkg/brownfield"
+	"gcp-tf-forge/pkg/compliance"
+	"gcp-tf-forge/pkg/discovery"
+	"gcp-tf-forge/pkg/graph"
+	"gcp-tf-forge/pkg/hclgen"
+	"gcp-tf-forge/pkg/hierarchy"
+	"gcp-tf-forge/pkg/matcher"
+
 	"github.com/spf13/cobra"
 )
 
@@ -31,7 +39,7 @@ func init() {
 }
 
 func runExport(cmd *cobra.Command, args []string) error {
-	_ = context.Background()
+	ctx := context.Background()
 
 	if projectID == "" {
 		return fmt.Errorf("project ID is required. Use --project or -p flag")
@@ -40,19 +48,64 @@ func runExport(cmd *cobra.Command, args []string) error {
 	fmt.Printf("🚀 Starting export for GCP project: %s\n", projectID)
 	fmt.Printf("📂 Target Directory: %s\n", outputDir)
 	fmt.Printf("📐 Layout Mode: %s\n", layout)
-	fmt.Printf("🔗 Network Bundling: %s\n", bundleNetwork)
+	fmt.Printf("🔗 Network Bundling: %s\n\n", bundleNetwork)
 
-	if existingState != "" {
-		fmt.Printf("🔎 Existing State Diffing: %s (Skipping already-managed resources)\n", existingState)
+	// Phase 1: Ancestry & Discovery
+	lineage, _ := hierarchy.ResolveAncestry(ctx, projectID)
+	var assets []*discovery.Asset
+	var err error
+
+	if lineage != nil && lineage.CAIAvailable {
+		fmt.Println("==> Phase 1: Ingesting assets via Cloud Asset Inventory...")
+		scanner := discovery.NewCAIScanner(projectID)
+		assets, err = scanner.Scan(ctx)
 	}
 
-	fmt.Println("\n==> Phase 1: Ingesting assets via Cloud Asset Inventory...")
-	fmt.Println("==> Phase 2: Resolving topology graph & Shared VPC data sources...")
-	fmt.Println("==> Phase 3: Matching custom & official Google modules...")
-	fmt.Println("==> Phase 4: Emitting HCL2 files, *.auto.tfvars, and Terraform 1.5+ import blocks...")
-	fmt.Println("==> Phase 5: Generating CIS GCP Foundations Compliance Audit report...")
+	if err != nil || len(assets) == 0 {
+		fmt.Println("==> Phase 1: Ingesting assets via Direct API Crawler...")
+		crawler := discovery.NewDirectCrawler(projectID)
+		assets, _ = crawler.Crawl(ctx)
+	}
 
-	fmt.Printf("\n✔ Successfully generated Terraform codebase in: %s\n", outputDir)
+	fmt.Printf("✔ Discovered %d cloud assets.\n", len(assets))
+
+	// Phase 2: State Diffing (if existing state provided)
+	if existingState != "" {
+		fmt.Printf("==> Phase 2: Diffing against existing state: %s\n", existingState)
+		diff, err := brownfield.IngestAndDiff(existingState, assets)
+		if err == nil {
+			_ = brownfield.GenerateDriftReport(outputDir, projectID, diff)
+			fmt.Printf("✔ Identified %d already-managed assets (skipping duplicate import blocks).\n", len(diff.AlreadyManaged))
+		}
+	}
+
+	// Phase 3: Graph Resolution
+	fmt.Println("==> Phase 3: Resolving topology graph & Shared VPC data sources...")
+	g := graph.NewGraph(projectID)
+	g.Build(assets)
+
+	// Phase 4: Module Matching
+	fmt.Println("==> Phase 4: Matching custom & official Google modules...")
+	engine := matcher.NewEngine(nil, bundleNetwork)
+	matchResult, err := engine.Reconcile(g)
+	if err != nil {
+		return fmt.Errorf("module reconciliation failed: %w", err)
+	}
+
+	// Phase 5: HCL Code Generation
+	fmt.Println("==> Phase 5: Emitting HCL2 files, domain *.auto.tfvars, and Terraform 1.5+ import blocks...")
+	gen := hclgen.NewGenerator(outputDir, projectID, layout)
+	if err := gen.Generate(matchResult); err != nil {
+		return fmt.Errorf("code generation failed: %w", err)
+	}
+
+	// Phase 6: Compliance Evaluation
+	fmt.Println("==> Phase 6: Evaluating CIS GCP Foundations Compliance...")
+	eval := compliance.NewEvaluator()
+	eval.Evaluate(assets)
+	_ = eval.GenerateReport(outputDir, projectID)
+
+	fmt.Printf("\n✨ Successfully generated Terraform codebase in: %s\n", outputDir)
 	fmt.Println("\nNext Steps:")
 	fmt.Println("  1. cd " + outputDir)
 	fmt.Println("  2. terraform init")
